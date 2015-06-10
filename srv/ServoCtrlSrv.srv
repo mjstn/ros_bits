@@ -1,0 +1,7 @@
+int64 servoAChannel
+int64 servoAPosition
+int64 servoBChannel
+int64 servoBPosition
+---
+int64 resultA
+int64 resultB
