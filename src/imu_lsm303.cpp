@@ -4,7 +4,7 @@
  * This module implements a ROS node (process) that monitors the compass and accelerometer.
  *
  * Author:    Mark Johnston
- * Creation:  20150605    Initial creation of this module
+ * Creation:  20150605    Initial creation of this module from Mark-Toys.com codebase
  *
  */
 
@@ -52,17 +52,20 @@
 #include <unistd.h>
 
 // These includes are very specific to our hardware and system software internals
-#include <imu_lsm303/imu_lsm303_hw_defs.h>   // our system's unique hardware defines
+#include <ros_bits/imu_lsm303_defs.h>   // our system's unique hardware defines
+
+// This define is a system wide place where we define I2C sem locks and devices
+#include <ros_bits/i2c_common_defs.h>
 
 // Our custom ROS Message structure defines
-#include <imu_lsm303/ImuLsm303Info.h>
+#include <ros_bits/ImuLsm303Msg.h>
 
 // Some very basic high level defines specific to this node
 #define  IMU_LSM303_POLL_FREQUENCY    1
 
 // Define a semaphore lock for I2C that will be initialized in main and called from callback
 // We pull in semaphore code inline rather than a lib as it is very minimal code
-#include <common/ipc_sems.cpp>         // We basically inline the sem calls
+#include <ros_bits/ipc_sems.cpp>         // We basically inline the sem calls
 
 // Setup process global semaphore id for I2C lock and ioctl structs for using the sem
 int g_i2c_semaphore_id;
@@ -71,16 +74,16 @@ int g_i2c_semaphore_id;
 int g_enable_sensor_monitoring = 1;
 
 // Pull in inline code for I2C routines. Requires ipc_sems
-#include <common/i2c_utils.cpp>
+#include <ros_bits/i2c_utils.cpp>
 
 // Pull in code for LSM303 Compass - Accelerometer board from AdaFruit. Requires i2c_utils
-#include <imu_lsm303/lsm303.h>
-#include <imu_lsm303/vector.h>
+#include <ros_bits/lsm303.h>
+#include <ros_bits/vector.h>
 
 
 // We inline the code for drivers of the LSM303 device
-#include <imu_lsm303/vector.c>
-#include <imu_lsm303/lsm303_drivers.c>
+#include <ros_bits/vector.c>
+#include <ros_bits/lsm303_drivers.c>
 
 
 /*
@@ -164,7 +167,7 @@ int getSensorInfo(int16_t *magneticData, int16_t *accelData)
 //
 int main(int argc, char **argv)
 {
-   printf("ROS Node starting pi_bot1:%s \n", THIS_NODE_NAME);
+   printf("ROS Node starting ros_bits:%s \n", THIS_NODE_NAME);
 
    // The ros::init() function initializes ROS and needs to see argc and argv
   ros::init(argc, argv, THIS_NODE_NAME);
@@ -173,7 +176,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   // Setup to advertise that we will publish our own system unique message
-  ros::Publisher imu_lsm303_pub = nh.advertise<imu_lsm303::ImuLsm303Info>("imu_lsm303", 1000);
+  ros::Publisher imu_lsm303_pub = nh.advertise<ros_bits::ImuLsm303Msg>("imu_lsm303", 1000);
 
   ros::Rate loop_rate(IMU_LSM303_POLL_FREQUENCY);
 
@@ -212,7 +215,7 @@ int main(int argc, char **argv)
 
     // Pick up any changes to ROS parameters
     int rosParamInt;
-    if (nh.getParam("/navigation/enable_sensor_monitoring", rosParamInt)) {
+    if (nh.getParam("/imu_lsm303/enable_sensor_monitoring", rosParamInt)) {
       g_enable_sensor_monitoring = rosParamInt;
     }
      
@@ -231,7 +234,7 @@ int main(int argc, char **argv)
      */
 
     // Publish the collision detect info using the CollisionInfo custom message
-    imu_lsm303::ImuLsm303Info msgImuLsm303;
+    ros_bits::ImuLsm303Msg msgImuLsm303;
     msgImuLsm303.xAcceleration = accelData[0];
     msgImuLsm303.yAcceleration = accelData[1];
     msgImuLsm303.zAcceleration = accelData[2];
@@ -246,7 +249,7 @@ int main(int argc, char **argv)
     msgImuLsm303.comment = ss.str();
 
     // Publish most recent sensor info on a ROS topic
-    imu_lsm303Pub.publish(msgImuLsm303);
+    imu_lsm303_pub.publish(msgImuLsm303);
 
     ++msgCount;
 

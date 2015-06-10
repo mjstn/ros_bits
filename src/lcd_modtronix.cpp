@@ -55,11 +55,13 @@
 #include <unistd.h>
 
 
-#include <ros_bits/imu_lsm303_defs.h>          // Display Specific defines
+#include <ros_bits/lcd_modtronix_defs.h>          // Display Specific defines
+
+#include <ros_bits/i2c_common_defs.h>             // I2C shared hardware bus defines
 
 #include <ros_bits/ipc_sems.cpp>         // We basically inline the sem calls
 
-#include <ros_bits/DisplayOutput.h>
+#include <ros_bits/LcdModtronixMsg.h>    // Message defines
 
 
 /*
@@ -304,9 +306,9 @@ int displaySetBrightness(int brightness, int semLock)
 
 
 /**
- * Receive mmessages for display output
+ * Receive messages for display output
  */
-void displayApiCallback(const pi_bot1::DisplayOutput::ConstPtr& msg)
+void displayApiCallback(const ros_bits::LcdModtronixMsg::ConstPtr& msg)
 {
   ROS_DEBUG("%s heard display output msg: of actionType %d row %d column %d numChars %d attr 0x%x text %s comment %s]",
                 THIS_NODE_NAME, msg->actionType, msg->row, msg->column, msg->numChars, msg->attributes, 
@@ -339,7 +341,7 @@ void displayApiCallback(const pi_bot1::DisplayOutput::ConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-   printf("ROS Node starting pi_bot1:%s \n", THIS_NODE_NAME);
+   printf("ROS Node starting ros_bits:%s \n", THIS_NODE_NAME);
 
   // The ros::init() function initializes ROS and needs to see argc and argv
   ros::init(argc, argv, THIS_NODE_NAME);
@@ -358,7 +360,9 @@ int main(int argc, char **argv)
   }
 
   ROS_INFO("%s: Display subsystem ready! ", THIS_NODE_NAME);
-  displayUpdate("   FiddlerBot       starting  ", 0, 1, 1, 0, i2cSemLockId);
+
+  //  You can setup a message on the display to get going prior to main code setting a message
+  //  displayUpdate("    Display         starting  ", 0, 1, 1, 0, i2cSemLockId);
 
   // Set to subscribe to the display topic and we then get callbacks for each message
   ros::Subscriber sub = nh.subscribe(TOPIC_LCD_DISPLAY_OUTPUT, 1000, displayApiCallback);

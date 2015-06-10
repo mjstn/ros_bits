@@ -7,7 +7,7 @@
  * not nor should it know what those channels are being used for at any given time
  *
  * Author:    Mark Johnston
- * Creation:  20150605    Initial creation of this module from a prior bot project
+ * Creation:  20150605    Initial creation of this module from a prior Mark-Toys.com project
  */
 #define  THIS_SERVER_NAME    "servo_ctrl"         // The Name for this ROS service
 
@@ -17,8 +17,11 @@
 
 #include "ros/ros.h"
 
-#include "servo_ctrl/servo_ctrl_hw_defs.h"
-#include "servo_ctrl/servo_ctrl.h"
+#include "ros_bits/serial_common_defs.h"        // Defines for system serial port to use for control
+
+#include "ros_bits/servo_ctrl_defs.h"           // Defines used for servo control module
+
+#include "ros_bits/ServoCtrlSrv.h"              // ROS service defines
 
 // We use the same call open helper call
 int openSerialPort(void) {
@@ -58,6 +61,11 @@ int initServoHardware() {
     ROS_ERROR("%s: Error in initial writing to serial port for initServoHardware() ", THIS_SERVER_NAME);
     retCode = -2;
   }
+
+  #ifdef SERVO_RESET_LINE        // {
+  // Code for custom servo board reset would go here if support desired
+  // }
+  #endif // SERVO_RESET_LINE
 
   #ifdef SERVO_POLOLU_PROTOCOL   // {
 
@@ -157,7 +165,8 @@ int setServoHardware(int fd, int channel, int position) {
 // Initialize servo controller for some other node in the system
 // Note that this routine alone cannot do a hard reset programatically as that
 // ability lies with another higher level node
-bool initServoController(pi_bot1::ServoControl::Request  &req, pi_bot1::ServoControl::Response &res)
+bool initServoController(ros_bits::ServoCtrlSrv::Request  &req, 
+                         ros_bits::ServoCtrlSrv::Response &res)
 {
   // the parameters for the request are not used so we don't read them
 
@@ -171,7 +180,8 @@ bool initServoController(pi_bot1::ServoControl::Request  &req, pi_bot1::ServoCon
 }
 
 // setOneServo only pays attention to the servo A parameters
-bool setOneServo(pi_bot1::ServoControl::Request  &req, pi_bot1::ServoControl::Response &res)
+bool setOneServo(ros_bits::ServoCtrlSrv::Request  &req, 
+                 ros_bits::ServoCtrlSrv::Response &res)
 {
   int servoChannel  = (int)req.servoAChannel;
   int servoPosition = (int)req.servoAPosition;
@@ -192,8 +202,8 @@ bool setOneServo(pi_bot1::ServoControl::Request  &req, pi_bot1::ServoControl::Re
 }
 
 // setTwoServos sets two servos for cases where they need to be set close to each other
-bool setTwoServos(pi_bot1::ServoControl::Request  &req,
-         pi_bot1::ServoControl::Response &res)
+bool setTwoServos(ros_bits::ServoCtrlSrv::Request  &req,
+                  ros_bits::ServoCtrlSrv::Response &res)
 {
   int servoAChannel  = (int)req.servoAChannel;
   int servoAPosition = (int)req.servoAPosition;
