@@ -3,6 +3,9 @@
  *
  * This module implements a ROS node (process) that monitors the compass and accelerometer.
  *
+ * Output is in a custom message for raw IMU parameters and also will be output in
+ * the ROS standard message of sensor_msgs/Imu.msg
+ *
  * Author:    Mark Johnston
  * Creation:  20150605    Initial creation of this module from Mark-Toys.com codebase
  *
@@ -59,6 +62,9 @@
 
 // Our custom ROS Message structure defines
 #include <ros_bits/ImuLsm303Msg.h>
+
+// The Standard ROS sensor_msgs/Imu.msg format
+#include <sensor_msgs/Imu.h>
 
 // Some very basic high level defines specific to this node
 #define  IMU_LSM303_POLL_FREQUENCY    1
@@ -118,6 +124,11 @@ int initSensorAndInfo(void)
 /*
  * getSensorInfo()   Get the magnetic and accellerometer data   
  *
+ * The 3 values for mag and accel come back from THIS routine in X,Y,Z order
+ * per the silkscreen on the board.
+ *
+ * NOTE: In the lower level routines magnetic values are read as X, Z, then Y.
+ *
  * We have to do I2C bus locking external to the ported code that reads the devices.
  *
  * non-zero return values mean some sort of error happened
@@ -131,20 +142,27 @@ int getSensorInfo(int16_t *magneticData, int16_t *accelData)
     return 0;
   }
   
-  ROS_DEBUG("%s: Fetch magnetic sensor data\n", THIS_NODE_NAME);
+  ROS_INFO("%s: Fetch magnetic sensor data\n", THIS_NODE_NAME);
 
   if (ipc_sem_lock(g_i2c_semaphore_id) < 0) {
       ROS_ERROR("%s: Magnetic and accellerometer sensor fetch sem lock error!\n", THIS_NODE_NAME);
       return -1;
   }
 
-  LSM303_Magn_Read_Magn(magneticData, false);
+  // The magnetic values are read as X, Z, then Y per silkscreen on the board
+  // so we shift the order to X,Y,Z here
+  int16_t swapVal;
+  LSM303_Magn_Read_Magn(&magneticData[0], false);
+  swapVal = magneticData[1];          // The Z axis from lower level routines
+  magneticData[1] = magneticData[2]; 
+  magneticData[2] = swapVal;        
 
-  ROS_DEBUG("%s: Fetch accelerometer sensor data\n", THIS_NODE_NAME);
+  ROS_INFO("%s: Fetch accelerometer sensor data\n", THIS_NODE_NAME);
   // DEBUG:  Read the status byte for accelerometer
   i2c_BufferRead(I2C_DEV_FOR_IMU_LSM303, I2C_IMU_LSM303_SEM_KEY,
       LSM_A_ADDRESS, &statusRegA, LSM_A_STATUS_REG_ADDR, 1); 
 
+  // The 3 acceleration values are for X, Y, then Z per silkscreen on the board
   LSM303_Acc_Read_Acc(&accelData[0], true);
 
   // Read the status byte for accelerometer to form return code
@@ -156,7 +174,7 @@ int getSensorInfo(int16_t *magneticData, int16_t *accelData)
       return -2;
   }
 
-  ROS_DEBUG("%s: LSM303 sensor data fetched.\n", THIS_NODE_NAME);
+  ROS_INFO("%s: LSM303 sensor data fetched.\n", THIS_NODE_NAME);
 
   return statusRegA & 0x0f;
 }
@@ -175,22 +193,30 @@ int main(int argc, char **argv)
   // Setup a NodeHandle for the main access point to communications with the ROS system.
   ros::NodeHandle nh;
 
+  // Setup to advertise the standard ROS sensor_msgs/Imu.msg format 
+  ros::Publisher ros_imu_pub = nh.advertise<sensor_msgs::Imu>("ros_imu", 1000);
+
   // Setup to advertise that we will publish our own system unique message
   ros::Publisher imu_lsm303_pub = nh.advertise<ros_bits::ImuLsm303Msg>("imu_lsm303", 1000);
 
   ros::Rate loop_rate(IMU_LSM303_POLL_FREQUENCY);
 
   // Setup process global semaphore id for I2C lock and ioctl structs for using the sem
-  // In this system our main node initializes this semaphore
-  int semMaxWaitSec = 300;
-  ROS_INFO("%s: Wait for I2C sem lock for up to %d seconds or die.  \n", THIS_NODE_NAME,  semMaxWaitSec);
-  g_i2c_semaphore_id = ipc_sem_get_by_key_with_wait(I2C_IMU_LSM303_SEM_KEY, semMaxWaitSec);
-  if (g_i2c_semaphore_id < 0) {
-    ROS_ERROR("%s: Cannot obtain I2C lock for key %d!  ERROR: %d\n", THIS_NODE_NAME,
-      I2C_IMU_LSM303_SEM_KEY, g_i2c_semaphore_id);
-    exit(1);
+  // In this system our main node initializes this semaphore if SEM_PROTECT_I2C is not zero
+  if (SEM_PROTECT_I2C == 0) {
+   g_i2c_semaphore_id = IPC_SEM_DUMMY_SEMID;
+   ROS_INFO("%s: I2C sem DUMMY lock used so user code can run \n", THIS_NODE_NAME);
+  } else {  
+    int semMaxWaitSec = 300;
+    ROS_INFO("%s: Wait for I2C sem lock for up to %d seconds or die.  \n", THIS_NODE_NAME,  semMaxWaitSec);
+    g_i2c_semaphore_id = ipc_sem_get_by_key_with_wait(I2C_IMU_LSM303_SEM_KEY, semMaxWaitSec);
+    if (g_i2c_semaphore_id < 0) {
+      ROS_ERROR("%s: Cannot obtain I2C lock for key %d!  ERROR: %d\n", THIS_NODE_NAME,
+        I2C_IMU_LSM303_SEM_KEY, g_i2c_semaphore_id);
+      exit(1);
+    }
+    ROS_INFO("%s: I2C sem lock obtained as value %d \n", THIS_NODE_NAME,  g_i2c_semaphore_id);
   }
-  ROS_INFO("%s: I2C sem lock obtained as value %d \n", THIS_NODE_NAME,  g_i2c_semaphore_id);
 
   // Initialize Accellerometer and compass hardware and setup driver context
   // As of 10/2014 the driver we use is non-reentrant for one device per ROS node
@@ -203,8 +229,8 @@ int main(int argc, char **argv)
   int msgCount = 0;
   int loopCount = 0;
 
-  int16_t magneticData[16];
-  int16_t accelData[16];
+  int16_t magnRawData[16];
+  int16_t accelRawData[16];
   int   pitch;
   int   roll;
   int   heading;
@@ -222,9 +248,12 @@ int main(int argc, char **argv)
     //  Read sensors and broadcast to subscribers on our topic
     ROS_DEBUG("%s: lock I2c sem with id %d prior to reading sensors ... \n", THIS_NODE_NAME, g_i2c_semaphore_id);
 
-    // Read the sensor data now
-    getSensorInfo(&magneticData[0], &accelData[0]);
+    // Read the sensor data now. This higher level routine returns
+    // both magnetic and acceleration in X,Y,Z axis order. 
+    getSensorInfo(&magnRawData[0], &accelRawData[0]);
 
+    // Calculate derived values using raw sensor data in X,Y,Z order
+    LSM303_CalPitchRollHeading(magnRawData, accelRawData);
     pitch   = LSM303_GetPitch();
     roll    = LSM303_GetRoll();
     heading = LSM303_GetHeading();
@@ -235,12 +264,12 @@ int main(int argc, char **argv)
 
     // Publish the collision detect info using the CollisionInfo custom message
     ros_bits::ImuLsm303Msg msgImuLsm303;
-    msgImuLsm303.xAcceleration = accelData[0];
-    msgImuLsm303.yAcceleration = accelData[1];
-    msgImuLsm303.zAcceleration = accelData[2];
-    msgImuLsm303.xMagnetic = magneticData[0];;
-    msgImuLsm303.yMagnetic = magneticData[1];;
-    msgImuLsm303.zMagnetic = magneticData[2];;
+    msgImuLsm303.xAcceleration = accelRawData[0];
+    msgImuLsm303.yAcceleration = accelRawData[1];
+    msgImuLsm303.zAcceleration = accelRawData[2];
+    msgImuLsm303.xMagnetic = magnRawData[0];;
+    msgImuLsm303.yMagnetic = magnRawData[1];;
+    msgImuLsm303.zMagnetic = magnRawData[2];;
     msgImuLsm303.pitch = pitch;
     msgImuLsm303.roll = roll;
     msgImuLsm303.heading = heading;

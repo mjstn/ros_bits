@@ -310,6 +310,8 @@ void I2CLSM_Acc_Read_OutReg(uint8_t* out)
 //                      acceleration [LSB] ACC= (out_h*256+out_l)/16 (12 bit rappresentation)
 // @param  out : buffer to store data
 // @retval None
+//
+// Acceleration values are returned in X, Y, Z order
 //*****************************************************************************
 static uint8_t LSM303_Acc_Read_RawData(int16_t* out)
 {
@@ -343,6 +345,8 @@ static uint8_t LSM303_Acc_Read_RawData(int16_t* out)
 //                              ACC=SENSITIVITY* (out_h*256+out_l)/16 (12 bit rappresentation)
 // @param  out : buffer to store data
 // @retval None
+//
+// Acceleration values are returned in X, Y, Z order
 //
 // Mod: mjstn 20141019 Pass in scaleData so we can disable or enable scaling of values
 //*****************************************************************************
@@ -403,6 +407,8 @@ void LSM303_Magn_Config(LSM_Magn_ConfigTypeDef *LSM_Magn_Config_Struct)
 // @brief  Read LSM303 magnetic field output register and compute the int16_t value
 // @param  out : buffer to store data
 // @retval None
+//
+// The 3 values are for X, Z, then Y per the silkscreen on the board
 //*****************************************************************************
 static void LSM303_Magn_Read_RawData(int16_t* out)
 {
@@ -413,7 +419,7 @@ static void LSM303_Magn_Read_RawData(int16_t* out)
             LSM_M_ADDRESS, buffer, LSM_M_OUT_X_H_ADDR, 6);
 
         for(i = 0; i < 3; i++){
-                out[i] = ((uint16_t)buffer[2 * i] << 8) | buffer[2 * i + 1];
+                out[i] = (((uint16_t)buffer[2 * i] & 0xff) << 8) | ((uint16_t)buffer[2 * i + 1] & 0xff);
         }
 }
 
@@ -422,6 +428,8 @@ static void LSM303_Magn_Read_RawData(int16_t* out)
 //                 Magn[Ga]=(out_h*256+out_l)*1000/ SENSITIVITY
 // @param  out : buffer to store data
 // @retval None
+//
+// The 3 values are for X, Z, then Y per the silkscreen on the board
 //
 // Mod: mjstn 20141019 Pass in scaleData so we can disable or enable scaling of values
 // BUG: Scale may not be functional as of Oct2014
@@ -474,6 +482,7 @@ void LSM303_Magn_Read_Magn(int16_t* out, bool scaleData)
                         break;
         }
 
+        // The 3 values are for X, Z, then Y per the silkscreen on the board
         LSM303_Magn_Read_RawData(out);
 
         if (scaleData) {
@@ -596,24 +605,26 @@ void LSM303_MakeAllVector(void)
 
 //********************************************************
 // Calculate Pitch, Roll, and Heading (Compass direction)
+//
+// This routine assumes sensor data is in X,Y,Z axis order
+//
+// This routine taken from CalPitchRollHeading() to allow
+// arrays passed in to hold the sensor values
+//
+// Note that the return values need to be fetched from get routines
+// mod20150621: Pass in sensor raw data in x,y,z order
 //********************************************************
-void LSM303_CalPitchRollHeading(void)
+void LSM303_CalPitchRollHeading(int16_t *magnRawData, int16_t *accelRawData)
 {
         float TempHeading;
-        int16_t AccelRaw[3];
-        int16_t MagRaw[3];
 
-        //Reading data from the sensor
-        LSM303_Acc_Read_RawData(AccelRaw);
-        LSM303_Magn_Read_RawData(MagRaw);
+        AccX = accelRawData[0];
+        AccY = accelRawData[1];
+        AccZ = accelRawData[2];
 
-        AccX = (int)AccelRaw[0];
-        AccY = (int)AccelRaw[1];
-        AccZ = (int)AccelRaw[2];
-
-        MagnX = (int)MagRaw[0];
-        MagnY = (int)MagRaw[1];
-        MagnZ = (int)MagRaw[2];
+        MagnX = magnRawData[0];
+        MagnY = magnRawData[1];
+        MagnZ = magnRawData[2];
 
         LSM303_Data_Init();     // Set calibration data
         LSM303_CalVhVa();               // Calculate magnetic vector H and acceleration vector A

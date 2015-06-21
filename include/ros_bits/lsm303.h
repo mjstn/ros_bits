@@ -689,7 +689,7 @@ void LSM303_Configuration(void);
 void LSM303_CalVhVa(void);
 void LSM303_CalUhUa(void);
 void LSM303_MakeAllVector(void);
-void LSM303_CalPitchRollHeading(void);
+void LSM303_CalPitchRollHeading(int16_t *magnRawData, int16_t *accelRawData);
 int LSM303_GetPitch(void);
 int LSM303_GetRoll(void);
 int LSM303_GetHeading(void);

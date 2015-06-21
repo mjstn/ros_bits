@@ -12,6 +12,11 @@
 #define IPC_SEM_ERR_FAILURE		-1
 #define IPC_SEM_ERR_NO_SEM_YET		-2
 
+
+// We define a dummy semid that when passed in we act like all went well but
+// in fact no lock or unlock happens.  This is to allow user space code if no sem is needed
+#define IPC_SEM_DUMMY_SEMID           -999
+
 //  ipc_sem_init returns a semid after initializing it's initial count to the specified count
 //  Return semid OR -1 if there was a failure in setup of the semaphore
 //         For -1 failure errno will contain the specific fault
@@ -103,8 +108,10 @@ int ipc_sem_get_by_key_with_wait(key_t key, int wait_in_seconds) {
 
 
 // ipc_sem_lock() will block until the semaphore is available then we MUST release it later
+//
 // Return 0 if we got the semaphore or return -1 if there was some failure.
 //        For -1 failure errno will contain the specific fault
+// Return 0 also if the semid is -1 which we use as 
 //
 // If 0 is the return value, the caller MUST release the sem no matter WHAT fault!
 int ipc_sem_lock(int semid) {
@@ -113,6 +120,12 @@ int ipc_sem_lock(int semid) {
   sem_wait.sem_num = 0;
   sem_wait.sem_op = -1;
   sem_wait.sem_flg = SEM_UNDO;
+
+
+  if (semid == IPC_SEM_DUMMY_SEMID) {
+    // We act like we are locked but in fact do nothing
+    return 0;
+  }
 
   if (semop(semid, &sem_wait, 1)) {
     return -1;
@@ -135,6 +148,11 @@ int ipc_sem_unlock(int semid) {
   sem_signal.sem_num = 0;
   sem_signal.sem_op = 1;
   sem_signal.sem_flg = SEM_UNDO;
+
+  if (semid == IPC_SEM_DUMMY_SEMID) {
+    // We act like we are locked but in fact do nothing
+    return 0;
+  }
 
   if (semop(semid, &sem_signal, 1) == -1) {
     return -1;          // errno will hold the reason for this failure case
