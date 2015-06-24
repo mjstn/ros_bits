@@ -9,7 +9,7 @@
  * Author:    Mark Johnston
  * Creation:  20150605    Initial creation of this module from a prior Mark-Toys.com project
  */
-#define  THIS_SERVER_NAME    "servo_ctrl"         // The Name for this ROS service
+#define  THIS_SERVER_NAME    "servo_ctrl_service"   // The Name for this ROS service
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,6 @@
 #include "ros/ros.h"
 
 #include "ros_bits/serial_common_defs.h"        // Defines for system serial port to use for control
-
 #include "ros_bits/servo_ctrl_defs.h"           // Defines used for servo control module
 
 #include "ros_bits/ServoCtrlSrv.h"              // ROS service defines
@@ -52,6 +51,7 @@ int initServoHardware() {
 
   ROS_INFO("%s: Setup servo baud rate with auto detect ", THIS_SERVER_NAME);
 
+  #ifndef SERVO_POLOLU_PROTOCOL   // {
   // Send a simple Mini SSC II Mode command to set servo number 6 just as a baud rate setup 
   // Frankly I wish I could set it with dip switch but it is sadly 'too smart for it's own good'
   outBuf[0] = 0xff;
@@ -61,6 +61,7 @@ int initServoHardware() {
     ROS_ERROR("%s: Error in initial writing to serial port for initServoHardware() ", THIS_SERVER_NAME);
     retCode = -2;
   }
+  #endif
 
   #ifdef SERVO_RESET_LINE        // {
   // Code for custom servo board reset would go here if support desired
@@ -71,12 +72,13 @@ int initServoHardware() {
 
   ROS_INFO("%s: Setup servo  PoloLu mode ", THIS_SERVER_NAME);
   // Need to setup controller if in more complex POLOLU protocol mode
-  outBuf[0] = 0x80;	// The Mini SSC II mode 
-  outBuf[1] = 0x01;     // Device ID which is 1 for micro 8 channel controller;
-  outBuf[2] = 0;        // Set parameters command
-  outBuf[4] = 0x50;     // 5 bit servo range with 0 = neutral
-  for (int c=1 ; (retCode == 0) && (c <= SERVO_MAX_CHANNEL) ; c++) {
-    outBuf[3] = c;            // set parameters for this channel
+  outBuf[0] = 0x80;	    // The Pololu Start Byte
+  outBuf[1] = 0x01;         // Device ID which is 1 for micro 8 channel controller;
+  outBuf[2] = 0;            // Command 0:  Set parameters 
+  outBuf[4] = 0x50;         // Servo On, Direction Fwd, 5 bit servo range 
+
+  for (int c=SERVO_MIN_CHANNEL ; (retCode == 0) && (c <= SERVO_MAX_CHANNEL) ; c++) {
+    outBuf[3] = c;          // Servo channel being setup
     if ((write(fd, outBuf, 5)) != 5) {             // Write all  bytes to the uart and thus the controller
       retCode = -5;
       break;
@@ -84,27 +86,15 @@ int initServoHardware() {
   }
   
   // Now set slew to not be so harsh for slower servo movements
-  outBuf[0] = 0x80;	    // The Mini SSC II mode 
+  outBuf[0] = 0x80;	    // The Pololu Start Byte
   outBuf[1] = 0x01;         // Device ID which is 1 for micro 8 channel controller;
   outBuf[2] = 1;            // Set speed of slew 
   outBuf[4] = SERVO_SLEW;   // 1 is 50 usec per sec, 127 is max slew speed
-  for (int c=1 ; (retCode == 0) && (c <= SERVO_MAX_CHANNEL) ; c++) {
-    outBuf[3] = c;            // set slew for this channel
+
+  for (int c=SERVO_MIN_CHANNEL ; (retCode == 0) && (c <= SERVO_MAX_CHANNEL) ; c++) {
+    outBuf[3] = c;          // Servo channel being setup
     if ((write(fd, outBuf, 5)) != 5) {             // Write all  bytes to the uart and thus the controller
       retCode = -6;
-      break;
-    }
-  }
-
-  // Now set slew to not be so harsh for slower servo movements
-  outBuf[0] = 0x80;	    // The Mini SSC II mode 
-  outBuf[1] = 0x01;         // Device ID which is 1 for micro 8 channel controller;
-  outBuf[2] = 1;            // Set speed of slew 
-  outBuf[4] = SERVO_SLEW;   // 1 is 50 usec per sec, 127 is max slew speed
-  for (int c=1 ; (retCode == 0) && (c <= SERVO_MAX_CHANNEL) ; c++) {
-    outBuf[3] = c;            // set slew for this channel
-    if ((write(fd, outBuf, 5)) != 5) {             // Write all  bytes to the uart and thus the controller
-      retCode = -7;
       break;
     }
   }
@@ -125,9 +115,10 @@ int initServoHardware() {
 // Low level servo controller call
 int setServoHardware(int fd, int channel, int position) {
   uint8_t outBuf[6];
+  int bytesSent = 0;
   int retCode = 0;
 
-  if ((channel < 0) || (channel > SERVO_MAX_CHANNEL)) {
+  if ((channel < SERVO_MIN_CHANNEL) || (channel > SERVO_MAX_CHANNEL)) {
     ROS_ERROR("%s: Illegal servo channel of %d! ", THIS_SERVER_NAME, channel);
     return -1;
   }
@@ -155,7 +146,10 @@ int setServoHardware(int fd, int channel, int position) {
   byteCount = 3;
 #endif
 
-  if ((write(fd, outBuf, byteCount)) != byteCount) {   // Write all  bytes to the uart and thus the controller
+  bytesSent = write(fd, outBuf, byteCount);    // Write all  bytes to the uart and thus the controller
+  if (bytesSent != byteCount) {   // Write all  bytes to the uart and thus the controller
+    ROS_ERROR("%s: Only wrote %d bytes out of %d for servo channel of %d! ", THIS_SERVER_NAME,
+        bytesSent, byteCount, channel);
     retCode = -9;
   }
 
@@ -190,11 +184,14 @@ bool setOneServo(ros_bits::ServoCtrlSrv::Request  &req,
 
   int spFd = openSerialPort();
   if (spFd < 0) {
+    ROS_ERROR("%s: Cannot open serial port for write to servo channel of %d! ", THIS_SERVER_NAME, servoChannel);
     return false;
   }
 
   // Set the PWM hardware for this one servo 
   int retCode = setServoHardware(spFd, servoChannel, servoPosition);
+  ROS_INFO("%s: setOneServo request: set servo %d to position %d had retCode %d", THIS_SERVER_NAME,
+          servoChannel, servoPosition, retCode);
 
   close(spFd);
 

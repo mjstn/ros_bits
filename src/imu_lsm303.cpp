@@ -197,7 +197,7 @@ int main(int argc, char **argv)
   ros::Publisher ros_imu_pub = nh.advertise<sensor_msgs::Imu>("ros_imu", 1000);
 
   // Setup to advertise that we will publish our own system unique message
-  ros::Publisher imu_lsm303_pub = nh.advertise<ros_bits::ImuLsm303Msg>("imu_lsm303", 1000);
+  ros::Publisher imu_lsm303_pub = nh.advertise<ros_bits::ImuLsm303Msg>("imu_lsm303_data", 1000);
 
   ros::Rate loop_rate(IMU_LSM303_POLL_FREQUENCY);
 

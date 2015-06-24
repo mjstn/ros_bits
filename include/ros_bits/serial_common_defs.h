@@ -6,7 +6,7 @@
 //
 
 // Define serial port Servo control will use 
-#define  SERVO_PWM_CONTROL_DEVICE          "/dev/ttyAMA0"
+#define  SERVO_PWM_CONTROL_DEVICE          "/dev/ttyCp2102a"
 
 
 #endif   //  __SERIAL_COMMON_DEFS_H

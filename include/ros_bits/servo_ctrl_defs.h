@@ -17,9 +17,10 @@
 // This module is fairly blind to the odd rules but that logic 'could' be in this server
 #define SERVO_POLOLU_PROTOCOL       // if not defined we use 3-byte  SERVO_MINI_SSC_II_MODE
 
+#define SERVO_MIN_CHANNEL    1      // Minimum servo channel to be supported
 #define SERVO_MAX_CHANNEL    6      // Maximum servo channels from 1 that we support
 #define SERVO_MIN_POSITION   0
 #define SERVO_MAX_POSITION   240
-#define SERVO_SLEW           4      // Pololu slew rate. 1 to 127
+#define SERVO_SLEW           20     // Pololu slew rate. 1 (slow) to 127 (fast)  0=instant
 
 #endif  // __SERVO_CTRL_HW_DEFS_H
