@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <iostream>
+#include <fstream>
+
 
 #include "ros/ros.h"
 
@@ -21,6 +24,12 @@
 #include "ros_bits/servo_ctrl_defs.h"           // Defines used for servo control module
 
 #include "ros_bits/ServoCtrlSrv.h"              // ROS service defines
+
+#ifdef SERVO_RESET_LINE        // {
+#include "ros_bits/GPIOClass.h"                 // Pull in GPIOClass which you must have to use SERVO_RESET_LINE
+#define  SERVO_RESET_GPIO_PIN   "27"            // The pin we will use for servo reset
+#include <ros_bits/GPIOClass.cpp>               // Do a straight inline of the GPIO class code
+#endif // SERVO_RESET_LINE
 
 // We use the same call open helper call
 int openSerialPort(void) {
@@ -64,9 +73,21 @@ int initServoHardware() {
   #endif
 
   #ifdef SERVO_RESET_LINE        // {
+
   // Code for custom servo board reset would go here if support desired
-  // }
-  #endif // SERVO_RESET_LINE
+  ROS_INFO("%s: Reset servo board ", THIS_SERVER_NAME);
+
+  GPIOClass* servoResetPort = new GPIOClass(SERVO_RESET_GPIO_PIN);
+  servoResetPort->export_gpio();
+  servoResetPort->setdir_gpio("out");
+
+  // Now bring the line low then high again
+  servoResetPort->setval_gpio("0");
+  ros::Duration(0.1).sleep();
+  servoResetPort->setval_gpio("1");
+  ros::Duration(0.2).sleep();
+
+  #endif // } SERVO_RESET_LINE
 
   #ifdef SERVO_POLOLU_PROTOCOL   // {
 

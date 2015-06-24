@@ -8,8 +8,8 @@
 //
 
 // If you have custom hardware support for a reset line to the servo controller 
-// then define this below AND code for your reset line in the servo_ctrl_server source code
-#undef  SERVO_RESET_LINE
+// then define this below AND change code for your reset line in servo_ctrl_server.cpp
+#define  SERVO_RESET_LINE
 
 // These defines are  owned by servo controller node but here for all-in-one hardware limits
 // Support up to 4 controllers. Controllers ignore channels they don't support via jumpers
