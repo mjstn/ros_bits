@@ -42,7 +42,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg message_gen
 ## Generate messages in the 'msg' folder
 #  Was Default   add_message_files( FILES Message1.msg Message2.msg)
 #  Example       add_message_files(DIRECTORY msg FILES Num.msg)
-add_message_files(DIRECTORY msg FILES ImuLsm303Msg.msg LcdModtronixMsg.msg)
+add_message_files(DIRECTORY msg FILES WheelControlMsg.msg ImuLsm303Msg.msg LcdModtronixMsg.msg)
 
 ## Generate services in the 'srv' folder
 #  Was Default   add_service_files( FILES Service1.srv Service2.srv)
@@ -164,6 +164,10 @@ include_directories(
 
 ## Build nodes for this bot
 include_directories(include ${catkin_INCLUDE_DIRS})
+
+add_executable(wheel_control src/wheel_control.cpp)
+target_link_libraries(wheel_control ${catkin_LIBRARIES})
+add_dependencies(wheel_control ros_bits_generate_messages_cpp)
 
 add_executable(imu_lsm303 src/imu_lsm303.cpp)
 target_link_libraries(imu_lsm303 ${catkin_LIBRARIES})

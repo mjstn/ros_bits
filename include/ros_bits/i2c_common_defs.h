@@ -19,7 +19,7 @@
 //
 // If  more than one node will use the same I2C dev you must set it to 1
 // AND you must have one node in the system like your main control node setup the sem.
-#define  SEM_PROTECT_I2C           1            // Set to 1 to use system V sem.
+#define  SEM_PROTECT_I2C           0            // Set to 1 to use system V sem.
 
 #define  SEM_I2C1_KEY              1111         // For lock of main      I2C bus
 #define  I2C_DEFAULT_SEM_KEY       SEM_I2C1_KEY
@@ -36,5 +36,10 @@
 #define  I2C_DEV_FOR_LCD_DISPLAY          I2C_DEFAULT_DEV
 #define  I2C_LCD_DISPLAY_SEM_KEY          SEM_I2C1_KEY
 #define  I2C_LCD_DISPLAY_REG_ADDR         0x29                 // 7 bit I2C Addr
+
+// Mark-Toys I2C motor control board Node for wheel control
+#define  I2C_DEV_FOR_WHEEL_CONTROL          I2C_DEFAULT_DEV
+#define  I2C_WHEEL_CONTROL_SEM_KEY          SEM_I2C1_KEY
+#define  I2C_WHEEL_CONTROL_REG_ADDR         0x60                 // 7 bit I2C Addr
 
 #endif   // __I2C_COMMON_DEFS_H
