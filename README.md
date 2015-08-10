@@ -21,6 +21,8 @@ Modules:
 
 i2c              Although not a ROS node, I have some I2C code in the include folder.  This is generally pulled in using include statements and not a library so it's easy to use.   This code can be seen in the ROS nodes I have presented in this repository.  
 
+wheel_control    A node that will provide differential drive of 2 motors and wheel encoder readback through the use of the Mark-Toys motor controller and QEI encoder board (that also controls servos depending on firmware) but this node will not do servos.
+
 lcd_modtronix    This runs a SparkFun 16x2 line LCD module over I2C.  By default a system V semaphore is expected to be initialized in your main code as discussed in prerequisites.   This node subscribes to a ros topic called /lcd_display_output  which has messages in a custom format of ros_bits/LcdModtronixMsg
 
 imu_lsm303       This is a ROS node that polls the AdaFruit Lcm303 compass/accellerometer and publishes to a ROS topic called /imu_lsm303_data   Your other ROS nodes can then subscribe and pull off items in the message.  By default a system V semaphore is expected to be initialized in your main code as discussed in prerequisites. 

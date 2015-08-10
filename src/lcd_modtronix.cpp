@@ -316,10 +316,15 @@ void displayApiCallback(const ros_bits::LcdModtronixMsg::ConstPtr& msg)
 
    // Now send data to the display
    int i2cSemLockId = -9;
-   i2cSemLockId = ipc_sem_get_by_key_with_wait(I2C_LCD_DISPLAY_SEM_KEY, 10);
-   if (i2cSemLockId < 0) {
-     ROS_INFO("%s: Cannot acquire lock for I2C! Skip Message! ", THIS_NODE_NAME);
-     return;
+   if (SEM_PROTECT_I2C == 0) {
+     i2cSemLockId = IPC_SEM_DUMMY_SEMID;
+     ROS_INFO("%s: I2C sem DUMMY lock used so user code can run \n", THIS_NODE_NAME);
+   } else {
+     i2cSemLockId = ipc_sem_get_by_key_with_wait(I2C_LCD_DISPLAY_SEM_KEY, 10);
+     if (i2cSemLockId < 0) {
+       ROS_INFO("%s: Cannot acquire lock for I2C! Skip Message! ", THIS_NODE_NAME);
+       return;
+     }
    }
 
    switch (msg->actionType) {
@@ -352,28 +357,20 @@ int main(int argc, char **argv)
   // Setup process global semaphore id for I2C lock and ioctl structs for using the sem
   // In this system our main node initializes this semaphore if SEM_PROTECT_I2C is not zero
   int i2cSemLockId = -9;
-
   if (SEM_PROTECT_I2C == 0) {
-   /**
-   * Setup I2C semaphore locks for our system and other nodes must wait till this happens
-   */
+    i2cSemLockId = IPC_SEM_DUMMY_SEMID;
+    ROS_INFO("%s: I2C sem DUMMY lock used so user code can run \n", THIS_NODE_NAME);
+  } else {
+    /**
+    * Setup I2C semaphore locks for our system and other nodes must wait till this happens
+    */
     ROS_INFO("%s: Setup I2C sem lock for the system or die.  \n", THIS_NODE_NAME);
-    i2cSemLockId = ipc_sem_init_lock(I2C_IMU_LSM303_SEM_KEY);
+    i2cSemLockId = ipc_sem_init_lock(I2C_LCD_DISPLAY_SEM_KEY);
     if (i2cSemLockId < 0) {
-      ROS_ERROR("%s: Cannot initialize I2C lock for key %d! \n", THIS_NODE_NAME, I2C_IMU_LSM303_SEM_KEY);
+      ROS_ERROR("%s: Cannot initialize I2C lock for key %d! \n", THIS_NODE_NAME, I2C_LCD_DISPLAY_SEM_KEY);
       exit; // This is system wide fatal so stop here perhaps, other nodes will abort.
     }
     ROS_INFO("%s: The system's I2C sem lock has been setup with sem ID %d.\n", THIS_NODE_NAME, i2cSemLockId);
-  }
-
-  // Get semaphore ID using the key.  main_brain creates this semaphore for I2C lock
-  ROS_INFO("%s: Get the I2C sem lock or die trying.  \n", THIS_NODE_NAME);
-
-  i2cSemLockId = ipc_sem_get_by_key_with_wait(I2C_LCD_DISPLAY_SEM_KEY, 100);
-  if (i2cSemLockId < 0) {
-    ROS_ERROR("%s: Cannot acquire lock for I2C!  ABORT! ", THIS_NODE_NAME);
-    displayUpdate(" Display Err!               ", 0, 1, 1, 0, -1);
-    exit;
   }
 
   ROS_INFO("%s: Display subsystem ready! ", THIS_NODE_NAME);
