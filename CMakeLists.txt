@@ -42,7 +42,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg message_gen
 ## Generate messages in the 'msg' folder
 #  Was Default   add_message_files( FILES Message1.msg Message2.msg)
 #  Example       add_message_files(DIRECTORY msg FILES Num.msg)
-add_message_files(DIRECTORY msg FILES WheelControlMsg.msg ImuLsm303Msg.msg LcdModtronixMsg.msg)
+add_message_files(DIRECTORY msg FILES WheelControlMsg.msg ImuLsm303Msg.msg LcdModtronixMsg.msg CharDisplayMsg.msg)
 
 ## Generate services in the 'srv' folder
 #  Was Default   add_service_files( FILES Service1.srv Service2.srv)
@@ -176,6 +176,10 @@ add_dependencies(imu_lsm303 ros_bits_generate_messages_cpp)
 add_executable(lcd_modtronix src/lcd_modtronix.cpp)
 target_link_libraries(lcd_modtronix ${catkin_LIBRARIES})
 add_dependencies(lcd_modtronix ros_bits_generate_messages_cpp)
+
+add_executable(char_display src/char_display.cpp)
+target_link_libraries(char_display ${catkin_LIBRARIES})
+add_dependencies(char_display ros_bits_generate_messages_cpp)
 
 add_executable(servo_ctrl_server src/servo_ctrl_server.cpp)
 target_link_libraries(servo_ctrl_server ${catkin_LIBRARIES})

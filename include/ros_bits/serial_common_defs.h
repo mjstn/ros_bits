@@ -8,5 +8,8 @@
 // Define serial port Servo control will use 
 #define  SERVO_PWM_CONTROL_DEVICE          "/dev/ttyCp2102a"
 
+// Define serial port serial char display would use
+#define  CHAR_DISP_CONTROL_DEVICE          "/dev/ttyCp2102b"
+
 
 #endif   //  __SERIAL_COMMON_DEFS_H
