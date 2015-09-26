@@ -53,13 +53,10 @@
 #include "std_msgs/String.h"
 
 // These next few are for I2C and ioctls and file opens
-#include <linux/i2c-dev.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 // These includes are very specific to our hardware and system software internals
 #include <ros_bits/wheel_control_defs.h>       // Wheel control message element defines
@@ -202,7 +199,7 @@ int motorDriver(int rightWheelPWMPercent, int rightWheelControl,
   buf[1] = MT_MOT_CTRL_RIGHT_MOTOR;
   buf[2] = motDrvPwmPercent;
   buf[3] = motDrvControl;
-  ROS_INFO("%s: motorDriver Right Wheel Write Bytes: Addr 0x%x channel %d PwmPct %d Control %d ",
+  ROS_ERROR("%s: motorDriver Right Wheel Write Bytes: Addr 0x%x channel %d PwmPct %d Control %d ",
                 THIS_NODE_NAME, i2cAddress, buf[1], buf[2], buf[3]);
   if ((write(fd, buf, 4)) != 4) {			// Write commands to the i2c port
     printf("Error writing to i2c slave motor controller\n");

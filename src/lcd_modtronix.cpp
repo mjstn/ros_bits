@@ -45,14 +45,10 @@
 #include "std_msgs/String.h"
 
 // These next few are for I2C and ioctls and file opens
-#include <linux/i2c-dev.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 
 #include <ros_bits/lcd_modtronix_defs.h>          // Display Specific defines

@@ -1,6 +1,10 @@
 #ifndef  __I2C_COMMON_DEFS_H
 #define  __I2C_COMMON_DEFS_H
 
+// We use these includes to talk to I2C in linux
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+
 //
 // IMU node for LSM303 for ROS Node Usage
 //
@@ -40,11 +44,11 @@
 // Mark-Toys I2C motor control board Node for wheel control
 #define  I2C_DEV_FOR_WHEEL_CONTROL          I2C_DEFAULT_DEV
 #define  I2C_WHEEL_CONTROL_SEM_KEY          SEM_I2C1_KEY
-#define  I2C_WHEEL_CONTROL_REG_ADDR         0x60                 // 7 bit I2C Addr
+#define  I2C_WHEEL_CONTROL_REG_ADDR         0x61                 // Mark-Toy MotCtrl chip 2 7 bit I2C Addr
 
 // Mark-Toys I2C motor control channel 2 for servos
 #define  I2C_DEV_FOR_SERVO_CONTROL          I2C_DEFAULT_DEV
 #define  I2C_SERVO_CONTROL_SEM_KEY          SEM_I2C1_KEY
-#define  I2C_SERVO_CONTROL_REG_ADDR         0x61                 // 7 bit I2C Addr
+#define  I2C_SERVO_CONTROL_REG_ADDR         0x60                 // Mark-Toy MotCtrl chip 1 bit I2C Addr
 
 #endif   // __I2C_COMMON_DEFS_H
