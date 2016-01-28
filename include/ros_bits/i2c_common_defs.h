@@ -42,13 +42,25 @@
 #define  I2C_LCD_DISPLAY_REG_ADDR         0x29                 // 7 bit I2C Addr
 
 // Mark-Toys I2C motor control board Node for wheel control
+// These addresses are for when both jumpers are not loaded 
+#define  I2C_MTOY_SERVO_PWM_SIDE_1          0x73    // Both jumpers out.  If both IN use 0x61
+#define  I2C_MTOY_SERVO_PWM_SIDE_0          0x72    // Both jumpers out.  If both IN use 0x60
+
 #define  I2C_DEV_FOR_WHEEL_CONTROL          I2C_DEFAULT_DEV
 #define  I2C_WHEEL_CONTROL_SEM_KEY          SEM_I2C1_KEY
-#define  I2C_WHEEL_CONTROL_REG_ADDR         0x61                 // Mark-Toy MotCtrl chip 2 7 bit I2C Addr
+#define  I2C_WHEEL_CONTROL_REG_ADDR         I2C_MTOY_SERVO_PWM_SIDE_1
 
 // Mark-Toys I2C motor control channel 2 for servos
 #define  I2C_DEV_FOR_SERVO_CONTROL          I2C_DEFAULT_DEV
 #define  I2C_SERVO_CONTROL_SEM_KEY          SEM_I2C1_KEY
-#define  I2C_SERVO_CONTROL_REG_ADDR         0x60                 // Mark-Toy MotCtrl chip 1 bit I2C Addr
+#define  I2C_SERVO_CONTROL_REG_ADDR         I2C_MTOY_SERVO_PWM_SIDE_0
+
+// Defines for Mark-Toys wheel encoder over I2C
+#define  I2C_DEV_FOR_WHEEL_ENCODERS         I2C_DEFAULT_DEV
+#define  I2C_WHEEL_ENCODERS_SEM_KEY         I2C_DEFAULT_SEM_KEY
+#define  I2C_MDVR_RIGHT_WHEEL_ENC_ADDR      I2C_MTOY_SERVO_PWM_SIDE_0
+#define  I2C_MDVR_LEFT_WHEEL_ENC_ADDR       I2C_MTOY_SERVO_PWM_SIDE_1
+
+
 
 #endif   // __I2C_COMMON_DEFS_H

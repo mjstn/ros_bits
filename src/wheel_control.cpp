@@ -16,6 +16,9 @@
  * Author:    Mark Johnston
  * Creation:  20150807    Initial creation of this module from Mark-Toys fiddlerbot robot wheel_control
  *
+ * This node is a very basic driver without a PID loop to take in WheelControlMsg messages and drive wheels.
+ * As of early Jan 2016 this simple motor was added to base_control which also uses Mark-Toys s wheel encoder
+ * The two of those together with the added PID control loop in base_control is a good match.
  */
 
 #define  THIS_NODE_NAME    "wheel_control"      // The Name for this ROS node
@@ -300,6 +303,9 @@ void wheelControlCallback(const ros_bits::WheelControlMsg::ConstPtr& msg)
 
 }
 
+//
+//  The main: loop for background processing
+//
 int main(int argc, char **argv)
 {
    printf("ROS Node starting ros_bits:%s \n", THIS_NODE_NAME);

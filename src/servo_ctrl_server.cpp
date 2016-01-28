@@ -258,10 +258,11 @@ int setMarkToysServoHardware(int channel, int position) {
   buf[0] = MTOY_CMD_SET_LR_SERVO;   // Command byte to the controller
   buf[1] = channel & 0xff;;
   buf[2] = position & 0xff;;
-  ROS_ERROR("%s: motorDriver Right Wheel Write Bytes: Addr 0x%x channel %d PwmPct %d Control %d ",
-                THIS_NODE_NAME, i2cAddress, buf[1], buf[2], buf[3]);
+  ROS_INFO("%s: Servo set using I2C Addr 0x%x  to set Servo channel %d to PwmPct %d ",
+                THIS_NODE_NAME, i2cAddress, buf[1], buf[2]);
   if ((write(fd, buf, 3)) != 3) {                       // Write commands to the i2c port
-    printf("Error writing to i2c slave motor controller\n");
+    ROS_ERROR("%s: ERROR writing to I2C servo ctrl at I2CAddr 0x%x Servo channel %d  PwmPct %d ",
+      THIS_NODE_NAME, i2cAddress, buf[1], buf[2]);
     retCode = -15;
   }
 
@@ -341,11 +342,11 @@ bool setOneServo(ros_bits::ServoCtrlSrv::Request  &req,
   int servoChannel  = (int)req.servoAChannel;
   int servoPosition = (int)req.servoAPosition;
 
-  ROS_INFO("%s: setOneServo request: set servo %d to position %d ", THIS_NODE_NAME, servoChannel, servoPosition);
+  ROS_DEBUG("%s: setOneServo request: set servo %d to position %d ", THIS_NODE_NAME, servoChannel, servoPosition);
 
   // Set the PWM hardware for this one servo 
   int retCode = setServoHardware(servoChannel, servoPosition);
-  ROS_INFO("%s: setOneServo request: set servo %d to position %d had retCode %d", THIS_NODE_NAME,
+  ROS_DEBUG("%s: setOneServo request: set servo %d to position %d had retCode %d", THIS_NODE_NAME,
           servoChannel, servoPosition, retCode);
 
   return (retCode == 0) ? true : false;
