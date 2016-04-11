@@ -131,21 +131,21 @@ int motMsgCtrlToDrvCtrl(int motDrvPwmPercent, int drvMsgCtrl) {
   int motDrvControl;
 
   if (motDrvPwmPercent == 0) {
-    motDrvControl = MT_MOT_CTRL_BREAK_TO_GND;
+    motDrvControl = MOT_CTRL_BREAK_TO_GND;
   } else {
     switch (drvMsgCtrl) {
       case MSG_MOTOR_DIRECTION_FORWARD:
-        motDrvControl = MT_MOT_CTRL_DIR_CLOCKWISE;
+        motDrvControl = MOT_CTRL_DIR_CLOCKWISE;
         break;
       case MSG_MOTOR_DIRECTION_REVERSE:
-        motDrvControl = MT_MOT_CTRL_DIR_CTR_CLOCKWISE;
+        motDrvControl = MOT_CTRL_DIR_CTR_CLOCKWISE;
         break;
       case MSG_MOTOR_BREAK_VCC:
-        motDrvControl = MT_MOT_CTRL_BREAK_TO_VCC;
+        motDrvControl = MOT_CTRL_BREAK_TO_VCC;
         break;
       default:
       case MSG_MOTOR_BREAK_GND:
-        motDrvControl = MT_MOT_CTRL_BREAK_TO_GND;
+        motDrvControl = MOT_CTRL_BREAK_TO_GND;
         break;
     }
   }

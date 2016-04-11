@@ -130,13 +130,15 @@ void clearCmdQueue()
 }
 
 
+std::string  g_serialPortName;
+
 // We use the same call open helper call
-int openSerialPort(void) {
+int openSerialPort(std::string spPortName ) {
   int   spFd;                                   // File descriptor for serial port
-  const char  *spPortName = CHAR_DISP_CONTROL_DEVICE; // hardware device for the serial port
-  spFd = open(spPortName, O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
+  std::string charDispSerialPort(CHAR_DISP_CONTROL_DEVICE);
+  spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
   if (spFd < 0) {
-    ROS_ERROR("%s: Error in open of serial port '%s' for servo controller! ", THIS_NODE_NAME, spPortName);
+    ROS_ERROR("%s: Error in open of serial port '%s' for servo controller! ", THIS_NODE_NAME, spPortName.c_str());
     // we just return the bad file descriptor also as an error
   }
   return spFd;
@@ -204,7 +206,7 @@ int  displayUpdate(std::string text, int attributes, int row, int column, int nu
   }
           
   // Now open serial port to get ready to update display
-  int spFd = openSerialPort();
+  int spFd = openSerialPort(g_serialPortName.c_str());
   if (spFd < 0) {
     ROS_ERROR("%s: Cannot open serial port for write to char display! ", THIS_NODE_NAME );
     return -1;
@@ -329,6 +331,11 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(NODE_LOOPS_PER_SEC);
 
   // Set the display bootup string  and some other setup parameters each time we start
+  std::string charDispSerialPort("bogusCommPort");   //  DEBUG!!!  CHAR_DISP_CONTROL_DEVICE);
+  nh.getParam("/char_display/serial_port", charDispSerialPort);
+  g_serialPortName = charDispSerialPort;
+  ROS_INFO("%s: Using comm port %s \n", THIS_NODE_NAME, g_serialPortName.c_str());
+  
   displayUpdate("    Display ", DISPLAY_ATTR_CLEAR_FIRST, 1, 1, 0);
   displayUpdate("    Started ", 0, 2, 1, 0);
 

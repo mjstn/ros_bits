@@ -37,10 +37,10 @@
 
 // Control bits for the motors
 // Think of this as LSB is INb and MSB is INa for a 2-bit value
-#define  MT_MOT_CTRL_BREAK_TO_GND      0
-#define  MT_MOT_CTRL_DIR_CTR_CLOCKWISE 1
-#define  MT_MOT_CTRL_DIR_CLOCKWISE     2
-#define  MT_MOT_CTRL_BREAK_TO_VCC      3
+#define  MOT_CTRL_BREAK_TO_GND      0
+#define  MOT_CTRL_DIR_CTR_CLOCKWISE 1
+#define  MOT_CTRL_DIR_CLOCKWISE     2
+#define  MOT_CTRL_BREAK_TO_VCC      3
 
 #endif  // __MOTOR_CONTROL_DEFS_H
 
