@@ -2,6 +2,14 @@
 
 This code is meant to help people get started with usage of some nodes and a service that may be of value to other people.   These modules are in use in some of my robots seen at www.mark-toys.com.
 
+You must have a valid ROS environment with catkin_ws/src folder for this proceedure to work and make.   You can see the general process off of ROS.org but it is assumed you are familiear with the catkin environment and building of ROS code.   Here are the steps in brief if you do have the full make environment already setup in ~/catkin_ws
+
+    cd ~/catkin_ws/src
+    git clone https://github.com/mjstn/ros_bits
+    cd ~/catkin_ws
+    catkin-make
+
+
 I have also taken the liberty of putting a GPIO class here that was formed and put out for usage for Raspberry Pi GPIO control.   Thanks to Hussam Al-Hertani for his repository here:  https://github.com/halherta/RaspberryPi-GPIOClass-v2
 
 
