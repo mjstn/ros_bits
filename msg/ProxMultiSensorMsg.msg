@@ -1,0 +1,9 @@
+int32  sensor1rangeMm
+int32  sensor2rangeMm
+int32  sensor3rangeMm
+int32  sensor4rangeMm
+int32  sensor5rangeMm
+int32  sensor6rangeMm
+int32  sensor7rangeMm
+int32  sensor8rangeMm
+string comment
