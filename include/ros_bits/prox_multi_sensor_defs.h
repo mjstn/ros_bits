@@ -5,7 +5,7 @@
 // Defines for Proximity Multi-Sensor node 
 //
 
-#define PROX_MULTI_SENSOR_DEV     "/dev/ttyProxMultiSensor"
+#define PROX_MULTI_SENSOR_DEV     "/dev/ttyProxSense"
 
 #define MAX_PROX_SENSORS     8    // Maximum sensors we can support from the multi-sensor device
 

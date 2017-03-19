@@ -82,6 +82,80 @@ int g_enable_sensor_monitoring = 1;
 // Pull in inline code for I2C routines. Requires ipc_sems
 #include <ros_bits/i2c_utils.cpp>
 
+// We use the same call open helper call
+int openSerialPort(std::string spPortName) {
+  int   spFd;                                   // File descriptor for serial port
+  spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
+  if (spFd < 0) {
+    ROS_ERROR("%s: Error in open of serial port '%s' for proximity sensor! ", THIS_NODE_NAME, spPortName.c_str());
+    // we just return the bad file descriptor also as an error
+  }
+  return spFd;
+}
+
+
+// Simple transmit with check for correct length.  Nutin fancy 
+int sendSerial(int spFd, std::string txString)
+{
+  char outBuf[128];
+  int  txByteCount;
+  int  bytesSent;
+
+  if (txString.length() > 127) {
+    return -1;    // not very informative but prevents core dump
+  }
+
+  txByteCount = txString.length();
+  bytesSent = write(spFd, txString.c_str(), txByteCount);    // Write all  bytes to the uart and thus the controller
+  if (bytesSent != txByteCount) {   // Write all  bytes to the uart and thus the controller
+    ROS_ERROR("%s: Only wrote %d bytes out of %d for firmware rev query!",
+        THIS_NODE_NAME, bytesSent, txByteCount);
+    return -2;
+  }
+  return 0;
+}
+
+// Read max of len bytes into buffer until a termination char or timeout while trying
+// Return number of bytes that were read
+int readSerialUntilChar(int spFd, std::string &inString, char termChar, int len, int timeoutMsec) {
+
+  int      i;
+  uint8_t  *inPtr;
+  uint8_t  inByte[4];
+  char     inBuf[512];
+  int      maxChars = 255;
+  int      bytes = 0;
+  int      byteRetries;
+
+  inPtr = (uint8_t*)inBuf;
+
+  byteRetries = timeoutMsec;
+  do {
+    if (1 == read(spFd, &inByte[0], 1)) {
+       bytes += 1;
+       if (bytes >= maxChars) {
+         return -9;   // Really should 'never' happen but must protect one self ...
+       }
+       // printf("DEBUG: Read got byte 0x%x \n", inByte);
+       *inPtr++ = inByte[0];    // Stash another received char in the buffer
+       byteRetries = 2;   // Reset retries for per byte
+       if (inByte[0] == termChar) {   // At termination char
+         *inPtr = 0;
+		 break;
+       }
+    } else {
+       byteRetries -= 1;
+       usleep(5000);
+    }
+  } while ((bytes < len) && (byteRetries > 0));
+
+  ROS_INFO("%s: Read '%s' \n", THIS_NODE_NAME, &inBuf[0]);
+
+  // Setup user buffer for successful reply\
+  inString = inbuf; 
+
+  return 0;
+}
 
 /*
  * initSensorAndInfo()   Setup the sensor for our usage
@@ -90,9 +164,20 @@ int g_enable_sensor_monitoring = 1;
  *
  * Negative return values mean some sort of error happened
  */
-int initSensorAndInfo(void)
+int initSensorAndInfo(int spFd)
 {
-  ROS_DEBUG("%s: Initialize proximity sensor module. (Just use defaults)\n", THIS_NODE_NAME);
+  int retCode = 0;
+
+  ROS_INFO("%s: Initialize proximity sensor module for 8 sensors. \n", THIS_NODE_NAME);
+  retCode = sendSerial(spFd, "fv\r");
+  if (retCode != 0) return -1;
+
+  // Setup for 8 sensors to be read
+  retCode = sendSerial(spFd, "s8\r");
+  if (retCode != 0) return -2;
+
+  retCode = sendSerial(spFd, "a0\r");
+  if (retCode != 0) return -2;
  
   return 0;
 }
@@ -102,9 +187,12 @@ int initSensorAndInfo(void)
  *
  * non-zero return values mean some sort of error happened
  */
-int getProximitySensorInfo(std::string serialDev, int32_t *proxSensorRanges)
+int getProximitySensorInfo(int spFd, int32_t *proxSensorRanges)
 {
   uint8_t statusRegA;
+  int     retCode = 0;
+  std::string replyFromSensor;
+  char    *inPtr;
 
   if (proxSensorRanges == NULL) {
     return -1;   // bad pointer
@@ -115,12 +203,21 @@ int getProximitySensorInfo(std::string serialDev, int32_t *proxSensorRanges)
     return 0;
   }
   
-  // TODO: !!! Get the real data from the sensors
+  // Get the real data from the sensors
+  retCode = sendSerial(spFd, "qa\r");
+  if (retCode != 0) return -2;
+ 
+  retCode = readSerialUntilChar(spFd, replyFromSensor, '>', 255, 200);
+  if (retCode != 0) {
+    ROS_ERROR("%s: Query from proximity sensor failed with err %d\n", THIS_NODE_NAME, retCode);
+  }
+  ROS_INFO("%s: Query from proximity sensor: '%s'\n", THIS_NODE_NAME, replyFromSensor.c_str());
+
   for (int i=0; i<MAX_PROX_SENSORS ; i++) {
     proxSensorRanges[i+1] = 300 + i;
   }
 
-  return 0;
+  return retCode;
 }
 
 
@@ -133,6 +230,7 @@ int main(int argc, char **argv)
   int32_t sensor_count = MAX_PROX_SENSORS;
   std::string sensorSerialDev = std::string(PROX_MULTI_SENSOR_DEV);
   char  strBuf[32];
+  char  replyBuf[256];
 
   // We will setup defaults for the sensor and maybe someday support them from rosparam
   uint8_t radiation_type = PROX_SENSOR_RADIATION_TYPE;
@@ -150,7 +248,6 @@ int main(int argc, char **argv)
   // Setup a NodeHandle for the main access point to communications with the ROS system.
   ros::NodeHandle nh;
 
-
   // Setup to advertise that we will publish our own system unique message
   ros::Publisher prox_multi_sensor_pub = nh.advertise<ros_bits::ProxMultiSensorMsg>(TOPIC_PROX_MULTI_SENSOR_DATA, 1000);
 
@@ -166,11 +263,21 @@ int main(int argc, char **argv)
   std::string tmpStr;
   if (nh.getParam("/prox_multi_sensor/port", tmpStr)) {
       sensorSerialDev = tmpStr;     // If we found it in ROS parameter server use this value
+  } else {
+	sensorSerialDev = PROX_MULTI_SENSOR_DEV;
   }
   ROS_INFO("%s: Using serial device '%s' and %d sensors", THIS_NODE_NAME, sensorSerialDev.c_str(), sensor_count);
 
+   // Now open serial port to get ready to update display
+  int spFd = openSerialPort(sensorSerialDev);
+  if (spFd < 0) {
+    ROS_ERROR("%s: Cannot open serial port '%s'for proximity sensor access! ",
+		THIS_NODE_NAME, sensorSerialDev.c_str() );
+    return -1;
+  }
+
   // Initialize the proximity sensor module (if required)
-  initSensorAndInfo();
+  initSensorAndInfo(spFd);
 
   for (int i=1; i <= sensor_count ; i++) {
     proxSensorRanges[i] = 20 + i;
@@ -196,10 +303,10 @@ int main(int argc, char **argv)
     //   g_enable_sensor_monitoring = rosParamInt;
     // }
     g_enable_sensor_monitoring = 1;
-     
+
     // Read the sensor data now. This higher level routine returns
     // both magnetic and acceleration in X,Y,Z axis order. 
-    getProximitySensorInfo(std::string(PROX_MULTI_SENSOR_DEV), &proxSensorRanges[0]);
+    getProximitySensorInfo(spFd, &proxSensorRanges[0]);
 
     /*
      * Act on the sensor data by publishing to any of our topic listeners

@@ -138,7 +138,7 @@ int openSerialPort(std::string spPortName ) {
   std::string charDispSerialPort(CHAR_DISP_CONTROL_DEVICE);
   spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
   if (spFd < 0) {
-    ROS_ERROR("%s: Error in open of serial port '%s' for servo controller! ", THIS_NODE_NAME, spPortName.c_str());
+    ROS_ERROR("%s: Error in open of serial port '%s'! ", THIS_NODE_NAME, spPortName.c_str());
     // we just return the bad file descriptor also as an error
   }
   return spFd;
