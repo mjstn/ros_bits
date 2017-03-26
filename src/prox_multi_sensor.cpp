@@ -253,15 +253,31 @@ int initSensorAndInfo(int spFd)
   int retCode = 0;
 
   ROS_INFO("%s: Initialize proximity sensor module for 8 sensors. \n", THIS_NODE_NAME);
+  retCode = sendSerial(spFd, "\r");
+  if (retCode != 0) return -2;
+  usleep(10000);
+
+#ifdef FULL_INITIALIZATION
+
   retCode = sendSerial(spFd, "fv\r");
-  if (retCode != 0) return -1;
+  if (retCode != 0) return -2;
+
+  usleep(10000);
 
   // Setup for 8 sensors to be read
   retCode = sendSerial(spFd, "s8\r");
-  if (retCode != 0) return -2;
+  if (retCode != 0) return -3;
+  usleep(100000);
 
+  // Turn off auto update mode
   retCode = sendSerial(spFd, "a0\r");
+  if (retCode != 0) return -4;
+  usleep(50000);
+
+  // To clear things just send a carrage return
+  retCode = sendSerial(spFd, "\r");
   if (retCode != 0) return -2;
+#endif
 
   usleep(100000);
  
