@@ -8,7 +8,7 @@
 //
 
 #define PROX_MULTI_SENSOR_DEV     "/dev/ttyProxSense"
-#define PROX_MULTI_SENSOR_BAUD    B38400
+#define PROX_MULTI_SENSOR_BAUD    38400
 
 #define MAX_PROX_SENSORS     8    // Maximum sensors we can support from the multi-sensor device
 

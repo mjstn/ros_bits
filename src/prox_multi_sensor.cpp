@@ -90,15 +90,26 @@ int g_enable_sensor_monitoring = 1;
 // Pull in inline code for I2C routines. Requires ipc_sems
 #include <ros_bits/i2c_utils.cpp>
 
+// A very simple open of a port but does not set baud rate so this must be done outside of this call
+int openSerialPortNoBaud(std::string spPortName) {
+  int   spFd;                                   // File descriptor for serial port
+  spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
+  if (spFd < 0) {
+    ROS_ERROR("%s: Error in open of serial port '%s' for proximity sensor! ", THIS_NODE_NAME, spPortName.c_str());
+    // we just return the bad file descriptor also as an error
+  }
+  return spFd;
+}
+
 // Open serial dev and set baud rate
-// requires POSIX speed_t baudrates found in termios.h
+// only supports 38400,19200 or 9600 baud.  Default Arduino side uses 38400 normally.
 // Returns non negative for file descriptor or negative for error case
 //
-int openSerialPortSetBaud(std::string spPortName, speed_t baudRate) {
+int openSerialPortSetBaud(std::string spPortName, int baudRate, int timeout10thSec) {
 
   int spFd;  // open handle for the port
 
-  spFd = open(spPortName.c_str(), (O_RDWR | O_NONBLOCK | O_NDELAY));  // | O_NOCTTY);
+  spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
   if (spFd == -1) {
     ROS_ERROR("%s: Error in open of serial port dev '%s'! ", THIS_NODE_NAME, spPortName.c_str());
     return spFd;
@@ -109,6 +120,19 @@ int openSerialPortSetBaud(std::string spPortName, speed_t baudRate) {
     struct termios tty;
     struct termios tty_old;
     memset (&tty, 0, sizeof tty);
+    speed_t baudSpeed = B38400;
+
+    switch (baudRate) {
+	case 38400: baudSpeed = B38400; break;
+	case 19200: baudSpeed = B19200; break;
+	case 9600:  baudSpeed = B9600; break;
+    default:
+      return -10;   // Invalid baud rate
+      break;
+    }
+
+    ROS_INFO("%s: Serial device '%s' open. Setup port using baud rate %d and timeout %d deciSec",
+      THIS_NODE_NAME, spPortName.c_str(), baudRate, timeout10thSec);
 
     /* Error Handling */
     if ( tcgetattr ( spFd, &tty ) != 0 ) {
@@ -117,8 +141,8 @@ int openSerialPortSetBaud(std::string spPortName, speed_t baudRate) {
     }
 
     /* Set Baud Rate */
-    cfsetospeed (&tty, baudRate);
-    cfsetispeed (&tty, baudRate);
+    cfsetospeed (&tty, baudSpeed);
+    cfsetispeed (&tty, baudSpeed);
 
     /* Setting other Port Stuff */
     tty.c_cflag     &=  ~PARENB;            // Make 8n1
@@ -128,7 +152,7 @@ int openSerialPortSetBaud(std::string spPortName, speed_t baudRate) {
 
     tty.c_cflag     &=  ~CRTSCTS;           // no flow control
     tty.c_cc[VMIN]   =  0;                  // read blocks
-    tty.c_cc[VTIME]  =  5;                  // 0.5 seconds read timeout
+    tty.c_cc[VTIME]  =  timeout10thSec;     // set timeout in 10th of seconds read timeout
     tty.c_cflag     |=  CREAD | CLOCAL;     // turn on READ & ignore ctrl lines
 
     /* Make raw */
@@ -148,18 +172,16 @@ int openSerialPortSetBaud(std::string spPortName, speed_t baudRate) {
     }
     spFd = -3;
   }
-}
 
-// A very simple open of a port but does not set baud rate
-int openSerialPortNoBaud(std::string spPortName) {
-  int   spFd;                                   // File descriptor for serial port
-  spFd = open(spPortName.c_str(), O_RDWR | O_NOCTTY);   // open port for read/write but not as controlling terminal
-  if (spFd < 0) {
-    ROS_ERROR("%s: Error in open of serial port '%s' for proximity sensor! ", THIS_NODE_NAME, spPortName.c_str());
-    // we just return the bad file descriptor also as an error
+  // Workaround required here because the port seems unusable unless I open again without setting it up
+  if (spFd > 0) {
+    close(spFd);
+    spFd = openSerialPortNoBaud(spPortName.c_str());
   }
+
   return spFd;
 }
+
 
 // Utility to split up string on a delimiter
 std::vector<string>  splitString(const std::string &s, char delimChar) {
@@ -231,8 +253,8 @@ int readSerialUntilChar(int spFd, std::string &replyString, char termChar, int l
     }
   } while ((bytes < len) && (byteRetries > 0));
 
-  //ROS_INFO("%s: Read '%s'  [0x%x, 0x%x, 0x%x, 0x%x ...]",
-  //  THIS_NODE_NAME, &inBuf[0], inBuf[0], inBuf[1], inBuf[2], inBuf[3]);
+  // ROS_INFO("%s: Read '%s'  [0x%x, 0x%x, 0x%x, 0x%x ...]",
+  //   THIS_NODE_NAME, &inBuf[0], inBuf[0], inBuf[1], inBuf[2], inBuf[3]);
 
   // Setup user buffer for successful reply
   // const char* cptr = &inBuf[0];
@@ -309,11 +331,13 @@ int getProximitySensorInfo(int spFd, int32_t *proxSensorRanges)
   retCode = sendSerial(spFd, "qa\r");
   if (retCode != 0) return -2;
  
+  ROS_DEBUG("%s: DEBUG: Read serial from proximity sensor: %s\n", THIS_NODE_NAME, replyFromSensor.c_str());
   retCode = readSerialUntilChar(spFd, replyFromSensor, '>', 250, 500);
   if (retCode != 0) {
     ROS_ERROR("%s: Query from proximity sensor failed with err %d\n", THIS_NODE_NAME, retCode);
+  } else {
+    ROS_DEBUG("%s: DEBUG: Query prox sensor: %s\n", THIS_NODE_NAME, replyFromSensor.c_str());
   }
-  ROS_DEBUG("%s: DEBUG: Query from proximity sensor: %s\n", THIS_NODE_NAME, replyFromSensor.c_str());
 
   vector<string>  pieces;
   pieces = splitString(replyFromSensor, ':');
@@ -353,7 +377,7 @@ int main(int argc, char **argv)
   int32_t proxRanges[MAX_PROX_SENSORS+1];
   int32_t sensor_count = MAX_PROX_SENSORS;
   std::string sensorSerialDev = std::string(PROX_MULTI_SENSOR_DEV);
-  speed_t   baudRate = PROX_MULTI_SENSOR_BAUD;
+  int   baudRate = PROX_MULTI_SENSOR_BAUD;
   char  strBuf[32];
   char  replyBuf[256];
   int retCode;
@@ -385,23 +409,31 @@ int main(int argc, char **argv)
       if (sensor_count > MAX_PROX_SENSORS) {
         sensor_count = MAX_PROX_SENSORS;
       }
+      ROS_INFO("%s: Number of sensors found as ROS parameter %d and set to %d",
+        THIS_NODE_NAME, paramInt, sensor_count); 
   }
   std::string tmpStr;
   if (nh.getParam("/prox_multi_sensor/port", tmpStr)) {
       sensorSerialDev = tmpStr;     // If we found it in ROS parameter server use this value
+      ROS_INFO("%s: Serial port device %s found as a ROS parameter", THIS_NODE_NAME, sensorSerialDev.c_str());
   } else {
 	sensorSerialDev = PROX_MULTI_SENSOR_DEV;
   }
-  ROS_INFO("%s: Using serial device '%s' and %d sensors", THIS_NODE_NAME, sensorSerialDev.c_str(), sensor_count);
+  if (nh.getParam("/prox_multi_sensor/baud", paramInt)) {
+      baudRate = paramInt;     // If we found it in ROS parameter server use this value
+      ROS_INFO("%s: Baud rate of %d found as a ROS parameter", THIS_NODE_NAME, baudRate);
+  }
+  ROS_INFO("%s: Using serial device '%s' and baud rate speed_t of %d configured for %d sensors",
+    THIS_NODE_NAME, sensorSerialDev.c_str(), baudRate, sensor_count);
 
    // Now open serial port to get ready to update display
-  // int spFd = openSerialPortSetBaud(sensorSerialDev, baudRate);
-  int spFd = openSerialPortNoBaud(sensorSerialDev);
+  int spFd = openSerialPortSetBaud(sensorSerialDev, baudRate, 0); 
   if (spFd < 0) {
-    ROS_ERROR("%s: Cannot open serial port '%s'for proximity sensor access! ",
-		THIS_NODE_NAME, sensorSerialDev.c_str() );
+    ROS_ERROR("%s: Cannot open serial port '%s' with baudrate %d for proximity sensor access! ",
+        THIS_NODE_NAME, sensorSerialDev.c_str(), baudRate );
     return -1;
   }
+
   ROS_INFO("%s: Serial device initialized. Initialize Sensor Subsystem next", THIS_NODE_NAME);
 
   // Initialize the proximity sensor module (if required)
@@ -427,6 +459,7 @@ int main(int argc, char **argv)
   int msgCount = 0;
   int loopCount = 1;
 
+  // mainloop:
   while (ros::ok())
   {
    	ROS_DEBUG("%s: DEBUG: Start loop %d ", THIS_NODE_NAME, loopCount);
