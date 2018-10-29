@@ -65,3 +65,13 @@ Modules:
                     (that also controls servos depending on firmware) but this node will not do servos.
 
 servo_ctrl_server   This is a ROS service that controls your servos.  We support the Pololu Mini Serial Servo Controller and as of Sept 2015 we now support Mark-Toys.com servo controller over I2C.   This expects to own a single serial port for output to the servo controller for Pololu but can share the I2C bus with other modules in this repository using the Mark-Toys method of system V semaphores across ROS nodes.   This service also has an option that is ON by default that will try to use Raspberry PI GPIO lines using GPIOClass code so if you dont have this be sure to undef SERVO_RESET_LINE in servo_ctrl_defs.h
+
+
+# ros_bits   General Purpose Tools
+
+    testPiGpio.py   This handy python tool allows verification of Raspberry Pi 2,3 and PiZero GPIO lines to check if a line has been damaged.   
+                    A standard execute of this python script allows the check as long as the user has ability to manipulate GPIO lines.
+                    To run it it is required to hook GPIO lines together typically with a female socket that hard wires lines per the script.
+                    Look early in the script for arrays where test1output drive test1inputs and make a connector to match that mapping.
+                    As of this writing the test2 intput and outputs need to match so the connector can be the same (of course).
+
