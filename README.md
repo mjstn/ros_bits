@@ -74,4 +74,7 @@ servo_ctrl_server   This is a ROS service that controls your servos.  We support
                     To run it it is required to hook GPIO lines together typically with a female socket that hard wires lines per the script.
                     Look early in the script for arrays where test1output drive test1inputs and make a connector to match that mapping.
                     As of this writing the test2 intput and outputs need to match so the connector can be the same (of course).
+     
+    gpioPoller.py   A simple tool that shows basic GPIO but also can look for a signal on a given GPIO input and report that event.
+                    This tool periodically checks RasPi GPIO lines and sets some other line on a raspberry pi
 
