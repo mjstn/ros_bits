@@ -59,6 +59,10 @@
 #include <vector>
 #include <termios.h>    // POSIX terminal control definitions
 
+
+// Commands to read from Mark-Toys Esp32 TofRadar subsystem
+#define TOF_RADAR_QUERY_SAMPLES_CMD   ":01T54");
+
 using namespace std;
 
 // The Standard ROS sensor_msgs/Range.msg
@@ -307,11 +311,11 @@ int initSensorAndInfo(int spFd)
 }
 
 /*
- * getProximitySensorInfo()   Get the latest readings from the sensor module
+ * getOctoProximitySensorInfo()   Get the latest readings from the octo-sensor module
  *
  * non-zero return values mean some sort of error happened
  */
-int getProximitySensorInfo(int spFd, int32_t *proxSensorRanges)
+int getOctoProximitySensorInfo(int spFd, int32_t *proxSensorRanges)
 {
   uint8_t statusRegA;
   int     retCode = 0;
@@ -369,14 +373,32 @@ int getProximitySensorInfo(int spFd, int32_t *proxSensorRanges)
 }
 
 
+/*
+ * getTofRadarSensorInfo()   Get the latest readings from the TimeOfFlight Radar subsystem
+ *
+ * The TofRadar is a Mark-Toys Esp32 unique subsystem communicated with using serial interface
+ * The times for readings are milliseconds in the past from the time of this call
+ * so the user must note the time the call was made then subtract off times we return here
+ *
+ * non-zero return values mean some sort of error happened
+ */
+int getTofRadarSensorInfo(int spFd, int32_t *proxSensorRanges, int32_t *proxSensorTimesMs)
+{
+  ROS_ERROR("%s: getTofRadarSensorInfo NOT IMPLEMENTED!\n", THIS_NODE_NAME);
+  return -1;
+}
+
+
 //
 //  The main: loop periodically polls the sensors and then publishes the readings on ROS topic
 //
 int main(int argc, char **argv)
 {
   int32_t proxRanges[MAX_PROX_SENSORS+1];
+  int32_t proxTimesMs[MAX_PROX_SENSORS+1];
   int32_t sensor_count = MAX_PROX_SENSORS;
   std::string sensorSerialDev = std::string(PROX_MULTI_SENSOR_DEV);
+  std::string sensorArrayType = std::string(PROX_SENSOR_ARRAY_TYPE);
   int   baudRate = PROX_MULTI_SENSOR_BAUD;
   char  strBuf[32];
   char  replyBuf[256];
@@ -403,6 +425,14 @@ int main(int argc, char **argv)
 
   ros::Rate loop_rate(SENSOR_POLL_FREQUENCY);
 
+  // The code can support different types of sensor arrays so find out what we are our use default
+  std::string arrayTypeStr;
+  if (nh.getParam("/prox_multi_sensor/array_type", arrayTypeStr)) {
+      sensorArrayType = arrayTypeStr;     // If we found it in ROS parameter server use this value
+      ROS_INFO("%s: Sensor array type %s found as a ROS parameter", THIS_NODE_NAME, sensorArrayType.c_str());
+  } else {
+	sensorArrayType = PROX_SENSOR_ARRAY_TYPE;
+  }
   int paramInt;
   if (nh.getParam("/prox_multi_sensor/sensor_count", paramInt)) {
       sensor_count = paramInt;     // If we found it in ROS parameter server use this value
@@ -471,14 +501,27 @@ int main(int argc, char **argv)
     // }
     g_enable_sensor_monitoring = 1;
 
-    // Read the sensor data now. This higher level routine returns
-    // both magnetic and acceleration in X,Y,Z axis order. 
-    retCode = getProximitySensorInfo(spFd, &proxRanges[0]);
-	if (retCode != 0) {
-    	ROS_ERROR("%s: Error in fetch of proximity sensor data!", THIS_NODE_NAME);
-	}
-   	ROS_DEBUG("%s: Sensor data: %5d,%5d,%5d,%5d,%5d,%5d,%5d,%5d", THIS_NODE_NAME,
-      proxRanges[1],proxRanges[2],proxRanges[3],proxRanges[4],proxRanges[5],proxRanges[6],proxRanges[7],proxRanges[8]);
+    // Read the distance sensor data now. 
+    std::string octoType(PROX_SENSOR_ARRAY_TYPE_OCTO_ARRAY);
+    if (sensorArrayType.compare(octoType) == 0) {
+      retCode = getOctoProximitySensorInfo(spFd, &proxRanges[0]);
+      if (retCode != 0) {
+    	ROS_ERROR("%s: Error in fetch of octo-proximity sensor data!", THIS_NODE_NAME);
+      }
+      ROS_DEBUG("%s: Octo Prox sensor data: %5d,%5d,%5d,%5d,%5d,%5d,%5d,%5d", THIS_NODE_NAME,
+    	proxRanges[1],proxRanges[2],proxRanges[3],proxRanges[4],proxRanges[5],proxRanges[6],proxRanges[7],proxRanges[8]);
+    } else {
+      ROS_DEBUG("%s: UNIMPLEMENTED Array Type of  '%s'", THIS_NODE_NAME, sensorArrayType.c_str());
+#ifdef TOF_RADAR_IMPLEMENTED
+      retCode = getTofRadarSensorInfo(spFd, &proxRanges[0], &proxTimesMs[0]);
+      if (retCode != 0) {
+    	ROS_ERROR("%s: Error in fetch of TofRadar proximity sensor data!", THIS_NODE_NAME);
+      }
+      ROS_DEBUG("%s: TofRadar Prox sensor data: [%5d,%5d] [%5d,%5d] [%5d,%5d] [%5d,%5d] [%5d,%5d] [%5d,%5d] [%5d,%5d]", THIS_NODE_NAME,
+    	proxRanges[1],proxTimesMs[1],proxRanges[2],proxTimesMs[2],proxRanges[3],proxTimesMs[3],
+        proxRanges[4],proxTimesMs[4],proxRanges[5],proxTimesMs[5],proxRanges[6],proxTimesMs[6],proxRanges[7],proxTimesMs[7]);
+#endif
+    }
 
     /*
      * Act on the sensor data by publishing to any of our topic listeners

@@ -7,10 +7,15 @@
 // Defines for Proximity Multi-Sensor node 
 //
 
+// The array type can be older 8-sensor in circle or newer TimeOfFlight scanning 'radar'
+#define PROX_SENSOR_ARRAY_TYPE_OCTO_ARRAY	"octo_array"
+#define PROX_SENSOR_ARRAY_TYPE_TOF_RADAR	"tof_radar"
+
+#define PROX_SENSOR_ARRAY_TYPE	  PROX_SENSOR_ARRAY_TYPE_OCTO_ARRAY
 #define PROX_MULTI_SENSOR_DEV     "/dev/ttyProxSense"
 #define PROX_MULTI_SENSOR_BAUD    38400
 
-#define MAX_PROX_SENSORS     8    // Maximum sensors we can support from the multi-sensor device
+#define MAX_PROX_SENSORS    11    // Maximum sensors we can support from the multi-sensor device
 
 #define PROX_SENSOR_MAX_RANGE_MM        2000     // We will assume larger values are not accurate.  
 #define PROX_SENSOR_BAD_RANGE_DEFAULT     30     // We will default to short but non-zero range for bogus values
