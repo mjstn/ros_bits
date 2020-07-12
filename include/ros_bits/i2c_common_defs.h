@@ -23,7 +23,7 @@
 //
 // If  more than one node will use the same I2C dev you must set it to 1
 // AND you must have one node in the system like your main control node setup the sem.
-#define  SEM_PROTECT_I2C           1            // Set to 1 to use system V sem.
+#define  SEM_PROTECT_I2C           0            // Set to 1 to use system V sem.
 
 #define  SEM_I2C1_KEY              1111         // For lock of main      I2C bus
 #define  I2C_DEFAULT_SEM_KEY       SEM_I2C1_KEY
