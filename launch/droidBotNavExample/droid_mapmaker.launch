@@ -1,0 +1,141 @@
+<launch>
+
+ <param name="/use_sime_time" value="true"/>
+
+ <!-- Setup to publish our robot model -->
+ <arg name="model" default="droidBot.urdf" />
+ <param name="robot_description" textfile="/home/ubuntu/catkin_ws/src/robo_mag/droidBot.urdf" />
+
+ <!--  XV-11 Neato Lidar Node from getsureal controller -->
+ <node pkg="xv_11_laser_driver" type="neato_laser_publisher" name="neato_laser_publisher"  respawn="true">
+    <param name="port" value="/dev/ttyACM0"/>
+    <param name="firmware_version" value="2"/>
+    <param name="frame_id" value="laser"/>       <!-- this was pre 20170219 was neato_lidar -->
+ </node>
+
+ <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="0.0 0.0 0.0 0 0 0.0 /map /odom 20"/>
+ <node pkg="tf" type="static_transform_publisher" name="base_link_laser" args="-0.03 0 0.20 0 0 0 /base_link /laser 20"/>
+ <node pkg="tf" type="static_transform_publisher" name="laser_prox_sensors" args="0.0 0 0.10 0 0 0 /laser /sensor_axis 20"/>
+
+  <!-- Provide simulated control of the robot joint angles -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" respawn="true">
+    <param name="use_gui" value="false" />
+    <param name="rate" value="20.0"/>
+  </node>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+    <param name="publish_frequency" value="20.0"/>
+  </node>
+
+  <!--  Mark-Toys.com Motor controller  TofRadar, Edge detect    -->
+  <node pkg="robo_mag" type="base_control" name="base_control" output="screen" respawn="false">
+       <param name="/edge_detect_type" value="1" />
+       <param name="/tof_radar_slots" value="11" />
+       <param name="/tof_radar_fov_width_rads" value="0.25" />
+       <param name="/tof_radar_spacing_rads" value="0.19" />
+       <param name="/serial_port" value="/dev/ttyUSB0"/>
+       <param name="/baudrate"    value="115200"/>
+       <param name="/pid_enabled" value="1" />
+       <param name="/pid_Kp"      value="7000.0" />
+       <param name="/pid_Ki"      value="1500.0" />
+       <param name="/pid_Kd"      value="0.0" />
+       <param name="/pid_intCap"  value="400.0" />
+       <param name="/pid_Kdom"    value="11000.0" />
+       <param name="/enc_tic_per_rev"  value="8600.0" />
+       <param name="/wheel_spacing"    value="0.252" />
+       <param name="/wheel_diameter"   value="0.072" />
+      
+       <!--  1 - Show pose update callbacks that set odom      -->
+       <!--  2 - Show move progress for drive and rotate       -->
+       <!--  4 - Show odom calculations as they change         -->
+       <param name="/logging_flags" value="5" />
+  </node>
+
+  <!--  Start up the Robo Magellian Nodes                    -->
+  <node pkg="robo_mag" type="robo_mag_main" name="robo_mag_main" output="screen" respawn="true">
+
+        <!--  Robot Type defines the hardware.                  -->
+        <!--  1=RoboMadgeEllen  2=DroidBot                      -->
+        <param name="/robot_mode"            value="2" />
+
+        <!--  Robo Magellian Mode. Controls high level mode     -->
+        <!--  0 - General purpose bot acting on instructions    -->
+        <!--  1 - Robo Magellan mode is a future mode for GPS   -->
+        <!--  2 - Lidar Follow mode follows a nearby object     -->
+        <!--  3 - Lidar Room Roam wanders around a closed room  -->
+        <!--  4 - RoboMadge moves back and forth between tags   -->
+        <!--  5 - DroidBot Wanders on Table                     -->
+        <!--  6 - DroidBot goes back and forth (full reverse)   -->
+        <!--  7 - DroidBot Finds and pushes can off of table    -->
+        <!--  8 - DroidBot Finds and pushes can into goal       -->
+       <param name="/robo_madge_mode"        value="0" />
+
+        <!--  Wheel geometry related values for this bot       -->
+       <param name="/bot_wheel_spacing"      value="0.23" />
+       <param name="/bot_wheel_vel_scaling"  value="50.0" />
+       <param name="/bot_wheel_ang_scaling"  value="6.28" />
+
+        <!--  These are used in Lidar Follow mode              -->
+        <!--  cam_follow  - Webcam follows the nearby target   -->
+        <!--  bot_rotate  - Bot rotates towards closest target -->
+        <!--  bot_follow  - move to closest target IF rotated  -->
+       <param name="/lidar_obj_cam_follow"   value="0" />
+       <param name="/lidar_obj_bot_rotate"   value="0" />
+       <param name="/lidar_obj_bot_follow"   value="0" />
+
+        <param name="/robo_nav_rotate_speed"       value="1.5" />
+       <param name="/robo_robo_nav_rotate_goal"   value="10" />
+       <param name="/robo_nav_distance_goal"      value="0.5" />
+       <param name="/robo_nav_drive_speed_cm_sec" value="12.0" />
+       <param name="/site_rough_longitude"    value="122.1" />
+       <param name="/site_rough_lattitude"    value="37.25" />
+       <param name="/drive_motor_idle"        value="127.0" />
+       <param name="/drive_motor_range"       value="40.0" />
+       <param name="/cmd_vel_use_overrides"   value="0" />
+       <param name="/cmd_vel_set_linearX"     value="0.0" />
+       <param name="/cmd_vel_set_angularZ"    value="0.0" />
+       <param name="/steering_center"         value="108.0" />
+       <param name="/steering_range"          value="140.0" />
+       <param name="/cam_pan_view_center"     value="110" />
+       <param name="/cam_tilt_view_center"    value="100" />
+       <param name="/cam_pan_look_rate"       value="200" />
+       <param name="/cam_pan_look_range"      value="0" />
+       <param name="/cam_pan_follow_cone"     value="1" />
+       <param name="/lidar_obj_min_range"     value="0.1" />
+       <param name="/lidar_obj_max_range"     value="1.5" />
+       <param name="/lidar_obj_min_deg"       value="2" />
+       <param name="/lidar_obj_max_deg"       value="50" />
+       <param name="/lidar_open_gap_range"    value="0.8" />
+       <param name="/lidar_open_gap_width"    value="0.3" />
+       <param name="/lidar_obj_rotate_speed"  value="0.7" />
+       <param name="/lidar_obj_distance_goal" value="0.3" />
+       <param name="/lidar_obj_drive_speed_cm_sec"   value="9.0" />
+  </node>
+
+  <!-- Do not run the the map server here because gmapping will server the map -->
+  <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find robo_mag)/maps/droidbot-ils.yaml"/>  -->
+
+  <!-- Joystick low level driver -->
+  <node name="joy_node" pkg="joy" type="joy_node" output="screen" respawn="true"/>
+
+  <!-- Joystick input node -->
+  <node name="joy_input" pkg="joy_input" type="joy_input" output="screen" respawn="true">
+    <param name="/disable_nav_stack"        value="0" />    <!-- Set to 0 to enable pub Nav targets to Nav stack -->
+    <param name="/enable_joystick"          value="1" />    <!-- Set to 0 to disable joystick as an input -->
+    <param name="/joystick_type"            value="0" />    <!-- XBOX 360 = 0    PS3 = 1 -->
+    <param name="/joystick_deadzone"        value="0.02" /> <!-- Force deadzone for idle joystick -->
+
+    <!-- Speeds used for move buttons and max joystick for joystick moves -->
+    <param name="/cmd_vel_msg_per_sec"    value="4.00" />
+
+    <!-- Speeds used for move buttons and max joystick for joystick moves -->
+    <param name="/cmd_vel_speed"          value="0.80" />   <!-- Sets the forward speed for buttons -->
+    <param name="/cmd_vel_turn_speed"     value="0.80" />   <!-- Sets the wheel speed for turn right or left -->
+    <param name="/cmd_vel_turn_angle"     value="0.50" />   <!-- turn  angle rad per sec for turn right or left -->
+
+    <param name="/cmd_vel_joy_max"        value="0.90" />   <!-- joystick max forward or back (negative) value -->
+    <param name="/cmd_vel_joy_turn_max"   value="0.90" />   <!-- joystick max right or left value and turn polarity -->
+  </node>
+
+</launch>
+
