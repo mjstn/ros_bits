@@ -19,6 +19,7 @@ These will not run a robot on their own but offer examples of the sort of things
 These examples do not include a costmap so these are simple in that way.  A costmap prevents the robot from hitting things that are placed in front of it since the original map was formed.
 
 First off one has to make a map of the area:   
+     
     - The user saves any old maps perhaps for other areas and cleans out a folder in home dir called ~/.ros/slam
      
     - The user starts his robot with a ROS launch file for his project.  In this case project is robo_mag
@@ -36,8 +37,8 @@ First off one has to make a map of the area:
 
 Once a map has been made the next step which can be done over and over is to navigate around using this map
 
-
-    The user places his map files from mapping into ~/.ros/slam  
+      
+    - The user places his map files from mapping into ~/.ros/slam  
       
     - The user edits his own what I am calling 'maprunner' launch file for the map_saver line to use name of his map
       
