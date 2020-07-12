@@ -18,22 +18,22 @@ These will not run a robot on their own but offer examples of the sort of things
 These examples do not include a costmap so these are simple in that way.  A costmap prevents the robot from hitting things that are placed in front of it since the original map was formed.
 
 First off one has to make a map of the area.   
-    1) The user saves any old maps perhaps for other areas and cleans out a folder in home dir called ~/.ros/slam
-    2) The user starts his robot with a ROS launch file for his project.  In this case project is robo_mag
-    linux> roslaunch robo_mag droid_mapmaker.launch
-    3) The user starts slam_gmapping having set it to use /scan topic (standard output for lidar generally)
-    linux> rosrun gmapping slam_gmapping scan:=scan
-    4) The user drives around his robot perhaps looking at RVIZ on a laptop on slave ROS to his robot as Master
+    - The user saves any old maps perhaps for other areas and cleans out a folder in home dir called ~/.ros/slam
+    -The user starts his robot with a ROS launch file for his project.  In this case project is robo_mag
+        linux> roslaunch robo_mag droid_mapmaker.launch
+    - The user starts slam_gmapping having set it to use /scan topic (standard output for lidar generally)
+        linux> rosrun gmapping slam_gmapping scan:=scan
+    - The user drives around his robot perhaps looking at RVIZ on a laptop on slave ROS to his robot as Master
     I am not going to explain that just now as it is complex and distracts from my simple mapping explanation
-    linux> rosrun teleop_twist_keyboard teleop_twist_keyboard.py           (Then drive around till room seems fully mapped)
-    5) Save the map (super important step!)   
-    linux> rosrun map_server map_saver -f myNewMap-ils                     (saves two files that are the 'map')
+        linux> rosrun teleop_twist_keyboard teleop_twist_keyboard.py           (Then drive around till room seems fully mapped)
+    - Save the map (super important step!)   
+        linux> rosrun map_server map_saver -f myNewMap-ils                     (saves two files that are the 'map')
 
 Once a map has been made the next step which can be done over and over is to navigate around using this map
-    1) The user places his map files from mapping into ~/.ros/slam  
-    2) The user edits his own what I am calling 'maprunner' launch file for the map_saver line to use name of his map
-    3) The user needs to start his robot with a ROS launch file suitable for his project. In this case my project is robo_mag
-    linux> roslaunch robo_mag droid_maprunner.launch
-    4) The user needs to have a component such as move_base and start it (sorry, not defined in this simple example)
-    linux> roslaunch magni_nav move_base.launch
-    5) The user defines new location(s) for his robot to move to using protocol for move_base
+    - The user places his map files from mapping into ~/.ros/slam  
+    - The user edits his own what I am calling 'maprunner' launch file for the map_saver line to use name of his map
+    - The user needs to start his robot with a ROS launch file suitable for his project. In this case my project is robo_mag
+        linux> roslaunch robo_mag droid_maprunner.launch
+    - The user needs to have a component such as move_base and start it (sorry, not defined in this simple example)
+        linux> roslaunch magni_nav move_base.launch
+    - The user defines new location(s) for his robot to move to using protocol for move_base
